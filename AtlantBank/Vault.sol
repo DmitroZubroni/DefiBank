@@ -11,6 +11,7 @@ contract Vault is Initializable, ERC4626Upgradeable, UUPSUpgradeable {
     string public vaultTitle;
     uint256 public managedAssets; // Суммарные "управляемые" активы (для расчёта цены шейра)
     address public owner;
+    uint apy;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Vault: not owner");
@@ -28,6 +29,7 @@ contract Vault is Initializable, ERC4626Upgradeable, UUPSUpgradeable {
 
         vaultTitle = _title;
         owner = msg.sender;
+        apy = 10;
     }
 
     function getData(
@@ -48,16 +50,15 @@ contract Vault is Initializable, ERC4626Upgradeable, UUPSUpgradeable {
     }
 
     function deposit(uint256 amount) external {
-        require(amount >= 10 * 10 ** decimals(), "min 10");
-        deposit(amount, msg.sender);
-        managedAssets += amount;
-    }
+    require(amount >= 10 * 10 ** decimals(), "min 10");
+    super.deposit(amount, msg.sender);
+    managedAssets += amount;
+}
 
-    function withdraw(uint256 amount) external {
-        // assets = shares * managedAssets / totalSupply (цена шейра учитывает reward)
-        withdraw(amount, msg.sender, msg.sender);
-        managedAssets -= amount;
-    }
+function withdraw(uint256 amount) external {
+    super.withdraw(amount, msg.sender, msg.sender);
+    managedAssets -= amount;
+}
 
     function allocateToMarket(
         address market,

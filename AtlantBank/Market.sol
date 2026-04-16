@@ -23,6 +23,7 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
     uint256 public collateralPrice;
     uint256 public borrowPrice;
     uint256 public fee;
+    uint fee2 = 100 - fee;
 
     address public owner;
     address public treasure;
@@ -43,13 +44,12 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
     function initialize(
         string memory title_,
         string memory shareName_, // имя collateralShare (ERC4626)
-        string memory borrowName_, // имя borrowShare (ERC20)
-        string memory borrowSymbol_,
         uint256 lltv_,
         uint256 interestRate_,
         address vault_,
         address treasure_,
-        address collateralToken_
+        address collateralToken_,
+        address borrowToken_
     ) public initializer {
         // ERC4626: collateralToken → collateralShares
         __ERC4626_init(IERC20(collateralToken_));
@@ -58,7 +58,7 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
         owner = msg.sender;
         title = title_;
         lltv = lltv_;
-        interestRate = interestRate_;
+        interestRate = interestRate_ * 1e18;
         vault = vault_;
         treasure = treasure_;
 
@@ -68,26 +68,23 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
         borrowPrice = 1e18;
         lastAccrueBlock = block.number;
         fee = 70;
-
-        // Деплоим BorrowShare ERC20 из Market-а
-        borrowShare = new BorrowShare(borrowName_, borrowSymbol_);
+        borrowToken = IERC20(borrowToken_);
     }
 
     function getData(
         string memory title_,
         string memory shareName_, // имя collateralShare (ERC4626)
-        string memory borrowName_, // имя borrowShare (ERC20)
-        string memory borrowSymbol_,
         uint256 lltv_,
         uint256 interestRate_,
         address vault_,
         address treasure_,
-        address collateralToken_
+        address collateralToken_,
+        address borrowToken_
     ) public view returns (bytes memory) {
         return
             abi.encodeCall(
                 this.initialize,
-                (title_, shareName_, borrowName_, borrowSymbol_, lltv_, interestRate_, vault_, treasure_, collateralToken_)
+                (title_, shareName_, lltv_, interestRate_, vault_, treasure_, collateralToken_, borrowToken_)
             );
     }
     
@@ -98,42 +95,29 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function _pendingBorrowIndex() internal view returns (uint256) {
-        return
-            currentBorrowIndex +
+    function accrue() internal {
+        currentBorrowIndex = currentBorrowIndex +
             (currentBorrowIndex *
                 interestRate *
                 (block.number - lastAccrueBlock)) /
                 (blockPerYear * 1e10);
-    }
-
-    function accrue() internal {
-        currentBorrowIndex = _pendingBorrowIndex();
         lastAccrueBlock = block.number;
     }
 
-    /// @notice Текущий долг пользователя (principal + accumulated interest)
-    function getCurrentDebt(address user) public view returns (uint256) {
-        uint256 principal = userBorrowAmount[user];
-        if (principal == 0) return 0;
-
-        uint256 userIndex = userBorrowIndex[user];
-        if (userIndex == 0) return 0;
-
-        uint256 pendingIndex = _pendingBorrowIndex();
-        return (principal * pendingIndex) / userIndex;
-    }
+   function accruedInterest() public view returns(uint) {
+    return userBorrowAmount[msg.sender] * (currentBorrowIndex - userBorrowIndex[msg.sender]);
+   }
 
     function getLtv(address user) public view returns (uint256) {
-        uint256 collateralAssets = convertToAssets(balanceOf(user));
-        uint256 debt = getCurrentDebt(user);
+        uint256 collateralAmount = convertToAssets(balanceOf(user)); // сколько токенов в залог вложил пользователь
+        uint256 borrowAmount = userBorrowAmount[msg.sender] + accruedInterest();
         return
-            (debt * borrowPrice * 1e18) / (collateralAssets * collateralPrice);
+            (borrowAmount * borrowPrice * 1e18) / (collateralAmount * collateralPrice);
     }
 
-    function depositMarket(uint256 assets) public {
+    function depositMarket(uint256 amount) public {
         accrue();
-        super.deposit(assets, msg.sender);
+        super.deposit(amount, msg.sender);
         require(getLtv(msg.sender) < lltv, "LTV will exceed LLTV");
     }
 
@@ -146,7 +130,7 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
     function borrow(uint256 amount) external {
         accrue();
 
-        uint256 debtBefore = getCurrentDebt(msg.sender);
+        uint256 debtBefore = userBorrowAmount[msg.sender] + accruedInterest();
         uint256 shares = (amount * 1e18) / currentBorrowIndex;
 
         userBorrowAmount[msg.sender] = debtBefore + amount;
@@ -155,47 +139,29 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
         borrowShare.mint(msg.sender, shares);
 
         require(getLtv(msg.sender) < lltv, "LTV >= LLTV");
-        require(
-            borrowToken.transfer(msg.sender, amount),
-            "borrow transfer failed"
+        require(borrowToken.transfer(msg.sender, amount),"borrow transfer failed"
         );
     }
 
     function repay(uint256 amount) external {
         accrue();
 
-        uint256 debt = getCurrentDebt(msg.sender);
-        uint256 principal = userBorrowAmount[msg.sender];
-        uint256 accruedInterest = debt - principal;
-
-        uint256 paidInterest = amount > accruedInterest
-            ? accruedInterest
-            : amount;
-        uint256 paidPrincipal = amount - paidInterest;
-
-        uint256 shares = borrowShare.balanceOf(msg.sender);
-        uint256 sharesToBurn = (shares * amount) / debt;
-
+        
         require(
-            borrowToken.transferFrom(msg.sender, address(this), amount),
-            "repay transfer failed"
-        );
-
-        uint256 vaultReward = (paidInterest * fee) / 100;
-        uint256 treasureReward = paidInterest - vaultReward;
-
-        require(
-            borrowToken.transfer(vault, paidPrincipal + vaultReward),
+            borrowToken.transfer(vault, accruedInterest() / fee),
             "vault transfer failed"
         );
         require(
-            borrowToken.transfer(treasure, treasureReward),
+            borrowToken.transfer(treasure, accruedInterest() / fee2),
             "treasure transfer failed"
         );
 
-        borrowShare.burn(msg.sender, sharesToBurn);
+        require(
+            borrowToken.transfer(address(this), accruedInterest() / fee2),
+            "treasure transfer failed"
+        );
 
-        uint256 remainingDebt = debt - amount;
+        uint256 remainingDebt = userBorrowAmount[msg.sender] + accruedInterest() - amount;
         if (remainingDebt == 0) {
             userBorrowAmount[msg.sender] = 0;
             userBorrowIndex[msg.sender] = 0;
@@ -203,6 +169,7 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
             userBorrowAmount[msg.sender] = remainingDebt;
             userBorrowIndex[msg.sender] = currentBorrowIndex;
         }
+        require(getLtv(msg.sender) < lltv, "LTV will exceed LLTV");
     }
 
     // ─── Info views ───────────────────────────────────────────────────────
@@ -240,7 +207,7 @@ contract Market is ERC4626Upgradeable, UUPSUpgradeable {
             borrowShare.balanceOf(user),
             balanceOf(user),
             userBorrowIndex[user],
-            getCurrentDebt(user),
+            userBorrowAmount[msg.sender] + accruedInterest(),
             getLtv(user)
         );
     }

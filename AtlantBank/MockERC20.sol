@@ -30,6 +30,15 @@ contract MockToken is ERC20 {
     function burn(address to, uint256 amount) external {
         _burn(to, amount);
     }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) public override returns (bool) {
+        _transfer(from, to, value);
+        return true;
+    }
 }
 
 contract BorrowShare is ERC20 {

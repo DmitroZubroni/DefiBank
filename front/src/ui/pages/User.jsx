@@ -1,59 +1,72 @@
 import { useContext, useEffect, useState } from 'react';
-import {Table, Spinner, Card, Button} from 'react-bootstrap';
+import { Button, Card } from 'react-bootstrap';
 import { AtlantContext } from '../../core/context';
-import { ContractService } from '../../service/ContractService';
+import  ContractService  from '../../service/ContractService';
 import { MARKETS } from '../../service/contracts.js';
 import Header from "../component/Header.jsx";
 
-const marketServices = MARKETS.map(m => ({ ...m, service: new ContractService(m.abi, m.address) }));
-
-
-const USER_COLS = [
-    { key: 'market',          label: 'Market' },
-    { key: 'borrowShares',    label: 'Borrow Shares' },
-    { key: 'collateralShares',label: 'Collateral Shares' },
-    { key: 'userBorrowIdx',   label: 'Borrow Index' },
-    { key: 'currentDebt_',   label: 'Current Debt' },
-    { key: 'currentLtv',      label: 'LTV' },
-];
+const marketServices = MARKETS.map(v => ({ ...v, service: new ContractService(v.abi, v.address) }));
 
 const User = () => {
     const { wallet, login } = useContext(AtlantContext);
-    const [rows, setRows] = useState([]);
+    const [users, setUsers] = useState([]);
 
     useEffect(() => {
         if (!wallet) return;
-        Promise.all(
-            marketServices.map(m =>
-                m.service.getUserInfo(wallet)
-                    .then(data => ({ market: m.label, ...data }))
-                    .catch(() => ({ market: m.label, error: true }))
-            )
-        ).then(setRows);
+        (async () => {
+            const usersData = await Promise.all(
+                marketServices.map(async (item) => {
+                    const data = await item.service.getUserInfo(wallet);
+                    return { ...item, data };
+                })
+            );
+
+            setUsers(usersData);
+        })();
     }, [wallet]);
 
-    if (!wallet) return <> <Header/> <Button onClick={login} className="container"> авторизоваться</Button>  </>;
+    if (!wallet) {
+        return (
+            <>
+                <Header />
+                <div className="container">
+                    <Button onClick={login}>Авторизация</Button>
+                </div>
+            </>
+        );
+    }
 
     return (
+        <>
+            <Header />
+            {
+                !wallet ?
+                    <Button onClick={login}>Авторизация</Button> :
 
-        <div >
-            <Header/>
-            <h4>User Info</h4>
-            <Card className="mb-2 p-2 text-muted"><small>{wallet}</small></Card>
-            <Table striped bordered hover size="sm">
-                <thead><tr>{USER_COLS.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead>
-                <tbody>
-                {rows.map((row, i) => (
-                    <tr key={i}>
-                        {row.error
-                            ? <td colSpan={USER_COLS.length} className="text-danger">Ошибка {row.market}</td>
-                            : USER_COLS.map(c => <td key={c.key}>{row[c.key]?.toString()}</td>)
-                        }
-                    </tr>
-                ))}
-                </tbody>
-            </Table>
-        </div>
+                        <div className="container">
+                            <h1>User</h1>
+
+                            <div>{wallet}</div>
+
+                            {users.map((user) => (
+                                <Card key={user.key || user.address}>
+                                    <Card.Body>
+                                        <Card.Title>{user.title}</Card.Title>
+                                        <div>Address: {user.address}</div>
+                                        <div>Borrow Shares: {user.data?.[0]?.toString?.() || ""}</div>
+                                        <div>Collateral Shares: {user.data?.[1]?.toString?.() || ""}</div>
+                                        <div>User Borrow Index: {user.data?.[2]?.toString?.() || ""}</div>
+                                        <div>Current Debt: {user.data?.[3]?.toString?.() || ""}</div>
+                                        <div>Current LTV: {user.data?.[4]?.toString?.() || ""}</div>
+                                    </Card.Body>
+                                </Card>
+                            ))}
+                        </div>
+
+            }
+
+
+        </>
     );
 };
 

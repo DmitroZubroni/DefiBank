@@ -507,6 +507,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "borrowToken",
+    "outputs": [
+      {
+        "internalType": "contract BorrowToken",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -589,7 +602,7 @@
         "type": "uint256"
       }
     ],
-    "name": "deposit",
+    "name": "depositVault",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -635,11 +648,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_asset",
-        "type": "address"
-      },
-      {
         "internalType": "string",
         "name": "_title",
         "type": "string"
@@ -653,6 +661,11 @@
         "internalType": "string",
         "name": "_shareSymbol",
         "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_borrowToken",
+        "type": "address"
       }
     ],
     "name": "initialize",
@@ -1044,19 +1057,6 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "assets",
         "type": "uint256"
       },
@@ -1079,6 +1079,19 @@
         "type": "uint256"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawVault",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   }

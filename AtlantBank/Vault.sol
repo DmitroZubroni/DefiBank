@@ -37,19 +37,19 @@ contract Vault is Initializable, ERC4626Upgradeable, UUPSUpgradeable {
     }
 
     function depositVault(uint256 amount) external {
-    require(amount >= 10 * 10 ** decimals(), "min 10");
-    uint256 shares = previewDeposit(amount);
-    _mint(msg.sender, shares);
-    borrowToken.transferCustom(msg.sender, address(this), amount);
-    managedAssets += amount;
-}
+        require(amount >= 10 * 10 ** decimals(), "min 10");
+        uint256 shares = previewDeposit(amount);
+        _mint(msg.sender, shares);
+        borrowToken.transferCustom(msg.sender, address(this), amount);
+        managedAssets += amount;
+    }
 
-function withdrawVault(uint256 amount) external {
-    uint256 shares = previewWithdraw(amount);
-    _mint(msg.sender, shares);
-    borrowToken.transferCustom(msg.sender, address(this), amount);
-    managedAssets -= amount;
-}
+    function withdrawVault(uint256 amount) external {
+        uint256 shares = previewWithdraw(amount);
+        _burn(msg.sender, shares);
+        borrowToken.transferCustom(address(this), msg.sender, amount);
+        managedAssets -= amount;
+    }
 
     function allocateToMarket(
         address market,
@@ -64,22 +64,22 @@ function withdrawVault(uint256 amount) external {
 
     /// @notice Полная информация о Vault.
     function getVault()
-        external
-        view
-        returns (
-            string memory _title,
-            string memory _shareName,
-            uint256 _managedAssets,
-            uint256 _totalShares,
-            uint256 _sharePrice,
-            address _asset
-        )
-    {
-        uint256 supply = totalSupply();
-        uint256 sharePrice = managedAssets / supply;
+    external
+    view
+    returns (
+        string memory _title,
+        string memory _shareName,
+        uint256 _managedAssets,
+        uint256 _totalShares,
+        uint256 _sharePrice,
+        address _asset
+    )
+{
+    uint256 supply = totalSupply();
+    uint256 sharePrice = supply == 0 ? 0 : managedAssets / supply;
 
-        return (vaultTitle, name(), managedAssets, supply, sharePrice, asset());
-    }
+    return (vaultTitle, name(), managedAssets, supply, sharePrice, asset());
+}
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

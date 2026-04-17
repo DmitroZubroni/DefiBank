@@ -11,11 +11,10 @@ contract BorrowToken is ERC20 {
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        uint256 initialSupply,
-        address initialHolder
+        address tom
     ) ERC20(name_, symbol_) {
         _decimals = decimals_;
-        _mint(initialHolder, initialSupply);
+        _mint(tom, 1000000000000000000000);
     }
 
     function decimals() public view override returns (uint8) {
@@ -43,24 +42,14 @@ contract CollateralToken is ERC20 {
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        uint256 initialSupply,
-        address initialHolder
+        address tom
     ) ERC20(name_, symbol_) {
         _decimals = decimals_;
-        _mint(initialHolder, initialSupply);
+        _mint(tom, 1000000000000000000000);
     }
 
     function decimals() public view override returns (uint8) {
         return _decimals;
-    }
-
-    // Функция для минта (для тестов)
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
-    }
-
-    function burn(address to, uint256 amount) external {
-        _burn(to, amount);
     }
 
     function transferCustom(address from, address to, uint amount) public {
@@ -74,25 +63,21 @@ contract BorrowShare is ERC20 {
     constructor(
         string memory name_,
         string memory symbol_,
-        uint8 decimals_,
-        uint256 initialSupply,
-        address initialHolder
+        uint8 decimals_
     ) ERC20(name_, symbol_) {
         _decimals = decimals_;
-        _mint(initialHolder, initialSupply);
     }
 
     function decimals() public view override returns (uint8) {
         return _decimals;
     }
 
-    // Функция для минта (для тестов)
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
+    function mint(address from, uint amount) public {
+        _mint(from, amount);
     }
 
-    function burn(address to, uint256 amount) external {
-        _burn(to, amount);
+    function burn(address from, uint amount) public {
+        _burn(from, amount);
     }
 
     function transferCustom(address from, address to, uint amount) public {

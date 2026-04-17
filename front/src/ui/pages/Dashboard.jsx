@@ -1,83 +1,96 @@
-import { useEffect, useState } from 'react';
-import { MARKETS, VAULTS } from '../../service/contracts.js';
-import { ContractService } from '../../service/ContractService';
-import { AtlantContext } from '../../core/context';
+import { useEffect, useState } from "react";
+import { Row, Col, Card } from "react-bootstrap";
 import Header from "../component/Header.jsx";
+import ContractService from "../../service/ContractService.jsx";
+import { MARKETS, VAULTS } from "../../service/contracts.js";
 
-// Создаём сервисы один раз из конфига
-const marketServices = MARKETS.map(m => ({
-    ...m,
-    service: new ContractService(m.abi, m.address),
+const marketServices = MARKETS.map((item) => ({
+    ...item,
+    service: new ContractService(item.abi, item.address),
 }));
 
-const vaultServices = VAULTS.map(v => ({
-    ...v,
-    service: new ContractService(v.abi, v.address),
+const vaultServices = VAULTS.map((item) => ({
+    ...item,
+    service: new ContractService(item.abi, item.address),
 }));
 
-// --- Карточка маркета ---
-const MarketCard = ({ label, service }) => {
-    const [data, setData] = useState(null);
+export default function Dashboard() {
+    const [markets, setMarkets] = useState([]);
+    const [vaults, setVaults] = useState([]);
 
     useEffect(() => {
-        service.getMarket().then(setData).catch(console.error);
-    }, [service]);
+        (async () => {
+            const marketsData = await Promise.all(
+                marketServices.map(async (item) => {
+                    const data = await item.service.getMarket();
+                    return { ...item, data };
+                })
+            );
 
-    if (!data) return <div className="card">Loading {label}...</div>;
+            const vaultsData = await Promise.all(
+                vaultServices.map(async (item) => {
+                    const data = await item.service.getVault();
+                    return { ...item, data };
+                })
+            );
 
-    return (
-        <div className="card">
-            <h3>{data.title}</h3>
-            <p>LLTV: {data.lltv.toString()}</p>
-            <p>Interest Rate: {data.interestRate.toString()}</p>
-            <p>Borrow Index: {data.currentBorrowIndex.toString()}</p>
-            <p>Collateral Price: {data.collateralPrice.toString()}</p>
-            <p>Borrow Price: {data.borrowPrice.toString()}</p>
-        </div>
-    );
-};
-
-// --- Карточка vault ---
-const VaultCard = ({ label, service }) => {
-    const [data, setData] = useState(null);
-
-    useEffect(() => {
-        service.getVault().then(setData).catch(console.error);
-    }, [service]);
-
-    if (!data) return <div className="card">Loading {label}...</div>;
+            setMarkets(marketsData);
+            setVaults(vaultsData);
+        })();
+    }, []);
 
     return (
-        <div className="card">
-            <h3>{data.title}</h3>
-            <p>Share: {data.shareName}</p>
-            <p>Managed Assets: {data.managedAssets.toString()}</p>
-            <p>Total Shares: {data.totalShares.toString()}</p>
-            <p>Share Price: {data.sharePrice.toString()}</p>
-        </div>
-    );
-};
+        <>
+            <Header />
 
-// --- Dashboard ---
-const Dashboard = () => {
-    return (
-        <div>
-            <Header/>
-            <h2>Vaults</h2>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                {vaultServices.map(v => (
-                    <VaultCard key={v.id} label={v.label} service={v.service} />
-                ))}
+            <div className="container">
+                <h1>Dashboard</h1>
+
+                <h2>Vaults</h2>
+
+                <Row>
+                    {vaults.map((vault) => (
+                        <Col key={vault.key || vault.address} md={6}>
+                            <Card>
+                                <Card.Body>
+                                    <Card.Title>{vault.title}</Card.Title>
+                                    <div>Address: {vault.address}</div>
+                                    <div>Title: {vault.data?.[0]?.toString?.() || ""}</div>
+                                    <div>Share Name: {vault.data?.[1]?.toString?.() || ""}</div>
+                                    <div>Managed Assets: {vault.data?.[2]?.toString?.() || ""}</div>
+                                    <div>Total Shares: {vault.data?.[3]?.toString?.() || ""}</div>
+                                    <div>Share Price: {vault.data?.[4]?.toString?.() || ""}</div>
+                                    <div>Asset: {vault.data?.[5]?.toString?.() || ""}</div>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
+
+                <h2>Markets</h2>
+
+                <Row>
+                    {markets.map((market) => (
+                        <Col key={market.key || market.address} md={6}>
+                            <Card>
+                                <Card.Body>
+                                    <Card.Title>{market.title}</Card.Title>
+                                    <div>Address: {market.address}</div>
+                                    <div>Title: {market.data?.[0]?.toString?.() || ""}</div>
+                                    <div>LLTV: {market.data?.[1]?.toString?.() || ""}</div>
+                                    <div>Interest Rate: {market.data?.[2]?.toString?.() || ""}</div>
+                                    <div>Borrow Index: {market.data?.[3]?.toString?.() || ""}</div>
+                                    <div>Collateral Price: {market.data?.[4]?.toString?.() || ""}</div>
+                                    <div>Borrow Price: {market.data?.[5]?.toString?.() || ""}</div>
+                                    <div>Borrow Token: {market.data?.[6]?.toString?.() || ""}</div>
+                                    <div>Collateral Token: {market.data?.[7]?.toString?.() || ""}</div>
+                                    <div>Borrow Share: {market.data?.[8]?.toString?.() || ""}</div>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
             </div>
-
-            <h2>Markets</h2>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                {marketServices.map(m => (
-                    <MarketCard key={m.id} label={m.label} service={m.service} />
-                ))}
-            </div>
-        </div>
+        </>
     );
-};
-
-export default Dashboard;
+}

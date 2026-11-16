@@ -3,15 +3,11 @@
 // где 1 = заёмный лимит LLTV использован полностью) и зоны риска. Расчёт самого
 // коэффициента остаётся на стороне экрана/контракта — здесь только отображение
 // (Ц6: смысл передаётся одновременно цветом, текстом и позицией, не только цветом).
+import { zoneFor } from './healthZone.js';
+
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-function zoneFor(ratio) {
-  if (ratio >= 0.9) return { tone: '#fb7185', label: 'Высокий риск' };
-  if (ratio >= 0.65) return { tone: '#f59e0b', label: 'Умеренный риск' };
-  return { tone: '#10b981', label: 'Безопасно' };
-}
-
-export default function HealthFactorGauge({ ratio = 0, className = '', caption }) {
+export default function HealthFactorGauge({ ratio = 0, className = '', caption, style }) {
   const r = clamp(ratio, 0, 1);
   const zone = zoneFor(r);
   const cx = 110;
@@ -32,7 +28,7 @@ export default function HealthFactorGauge({ ratio = 0, className = '', caption }
   const describedId = `hf-desc-${Math.round(r * 100)}`;
 
   return (
-    <svg viewBox="0 0 220 128" className={className} role="img" aria-labelledby={describedId}>
+    <svg viewBox="0 0 220 128" className={className} style={style} role="img" aria-labelledby={describedId}>
       <title id={describedId}>
         {`Health Factor: ${Math.round(r * 100)}% использованного лимита — ${zone.label}`}
       </title>
@@ -58,5 +54,3 @@ export default function HealthFactorGauge({ ratio = 0, className = '', caption }
     </svg>
   );
 }
-
-export { zoneFor };

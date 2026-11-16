@@ -1,148 +1,200 @@
-import React from 'react'
-import { typograph } from '../../core/typograph'
+import { useContext } from 'react';
+import { AtlantContext } from '../../core/context';
+import { typograph } from '../../core/typograph';
+import Icon from '../icons/Icon.jsx';
 
+// --- ПРАВИЛО У1: 4 СОСТОЯНИЯ ЭКРАНА СТУДИИ «КАЛИБР» ---
+
+/**
+ * 1. Пустое состояние (EmptyState)
+ * Объясняет: что это за раздел, почему здесь пока пусто и как наполнить (Я4).
+ */
 export function EmptyState({
-  title = 'Нет доступных позиций',
-  description = 'Подключите Web3-кошелек или откройте инвестиционное хранилище для начисления доходности.',
-  actionLabel,
+  title = 'Нет активных позиций',
+  description = 'Подключите институциональный кошелек или внесите депозит в хранилище ликвидности ERC-4626 для начисления доходности.',
+  actionLabel = 'Открыть хранилища',
   onAction,
   secondaryLabel,
   onSecondary,
-  icon,
+  icon = 'inbox',
   className = '',
 }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`defi-card text-center p-8 sm:p-12 border-dashed border-emerald-500/20 ${className}`}
-    >
-      <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-        {icon || <span className="text-2xl">🏦</span>}
+    <div role="status" aria-live="polite" className={`card state-card state-card--empty ${className}`}>
+      <div className="state-card__icon state-card__icon--gold">
+        <Icon name={icon} size={26} />
       </div>
-      <h3 className="text-white font-bold text-lg tracking-tight">
-        {typograph(title)}
-      </h3>
-      <p className="text-slate-400 text-xs sm:text-sm mt-1.5 max-w-md mx-auto leading-relaxed">
-        {typograph(description)}
-      </p>
+      <h3 className="state-card__title">{typograph(title)}</h3>
+      <p className="state-card__desc">{typograph(description)}</p>
 
       {(actionLabel || secondaryLabel) && (
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-          {actionLabel && onAction && (
-            <button
-              onClick={onAction}
-              className="defi-btn-primary text-xs sm:text-sm py-2.5 px-5 cursor-pointer"
-            >
-              <span>{typograph(actionLabel)}</span>
+        <div className="cluster" style={{ justifyContent: 'center' }}>
+          {actionLabel && (
+            <button type="button" onClick={onAction} className="btn btn--primary">
+              {typograph(actionLabel)}
             </button>
           )}
-          {secondaryLabel && onSecondary && (
-            <button
-              onClick={onSecondary}
-              className="defi-btn-secondary text-xs sm:text-sm py-2.5 px-5 cursor-pointer"
-            >
+          {secondaryLabel && (
+            <button type="button" onClick={onSecondary} className="btn btn--secondary">
               {typograph(secondaryLabel)}
             </button>
           )}
         </div>
       )}
     </div>
-  )
+  );
 }
 
+/**
+ * 2. Состояние загрузки (LoadingSkeleton)
+ * Повторяет геометрию будущих карточек, исключая прыжки макета (CLS = 0).
+ */
 export function LoadingSkeleton({ count = 2, className = '' }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      className={`grid gap-4 md:grid-cols-2 ${className}`}
-    >
-      <span className="visually-hidden">Загрузка смарт-контрактов...</span>
+    <div role="status" aria-live="polite" aria-busy="true" className={`grid-cards ${className}`}>
+      <span className="visually-hidden">Загрузка данных смарт-контрактов…</span>
       {Array.from({ length: count }).map((_, idx) => (
-        <div
-          key={idx}
-          className="defi-card animate-pulse h-48 flex flex-col justify-between p-5 border-white/5 bg-slate-900/60"
-        >
-          <div className="flex items-center justify-between">
-            <div className="h-4 w-1/3 rounded bg-slate-700/50" />
-            <div className="h-6 w-16 rounded-full bg-emerald-500/10" />
+        <div key={idx} className="card card--pad" style={{ minHeight: 230 }}>
+          <div className="flex items-center justify-between gap-2 mb-0" style={{ marginBottom: '1rem' }}>
+            <div className="flex items-center gap-3">
+              <span className="skeleton" style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)' }} />
+              <span>
+                <span className="skeleton mb-0" style={{ width: 130, height: 16, display: 'block', marginBottom: 6 }} />
+                <span className="skeleton" style={{ width: 80, height: 12, display: 'block' }} />
+              </span>
+            </div>
+            <span className="skeleton" style={{ width: 70, height: 24, borderRadius: 9999 }} />
           </div>
-          <div className="space-y-2">
-            <div className="h-3 w-3/4 rounded bg-slate-800/80" />
-            <div className="h-3 w-1/2 rounded bg-slate-800/80" />
+
+          <div className="data-tile" style={{ marginBottom: '1rem' }}>
+            <div className="data-grid">
+              <div>
+                <span className="skeleton" style={{ width: 90, height: 11, display: 'block', marginBottom: 6 }} />
+                <span className="skeleton" style={{ width: 110, height: 18, display: 'block' }} />
+              </div>
+              <div>
+                <span className="skeleton" style={{ width: 80, height: 11, display: 'block', marginBottom: 6 }} />
+                <span className="skeleton" style={{ width: 90, height: 18, display: 'block' }} />
+              </div>
+            </div>
           </div>
-          <div className="h-9 w-full rounded-xl bg-slate-800/50" />
+
+          <div className="flex gap-2">
+            <span className="skeleton" style={{ height: 44, flex: 1, borderRadius: 'var(--radius-md)' }} />
+            <span className="skeleton" style={{ height: 44, flex: 1, borderRadius: 'var(--radius-md)' }} />
+          </div>
         </div>
       ))}
     </div>
-  )
+  );
 }
 
+/**
+ * 3. Состояние ошибки (ErrorState)
+ * Формулирует причину сбоя и обязательно даёт кнопку повтора (У1, Я2).
+ */
 export function ErrorState({
-  title = 'Ошибка вызова смарт-контракта',
-  description = 'Не удалось синхронизировать параметры хранилища с блокчейном.',
+  title = 'Сбой синхронизации с узлом блокчейна',
+  description = 'Не удалось получить актуальные данные смарт-контракта. Проверьте сетевое подключение к RPC-шлюзу и повторите запрос.',
   onRetry,
   retryLabel = 'Повторить запрос',
   className = '',
 }) {
   return (
-    <div
-      role="alert"
-      className={`defi-card text-center p-8 border-rose-500/30 bg-rose-500/5 ${className}`}
-    >
-      <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-3 shadow-[0_0_16px_rgba(244,63,94,0.2)]">
-        <span className="text-xl">⚠️</span>
+    <div role="alert" className={`card state-card state-card--error ${className}`}>
+      <div className="state-card__icon state-card__icon--danger">
+        <Icon name="alert" size={26} />
       </div>
-      <h3 className="text-white font-bold text-base">
-        {typograph(title)}
-      </h3>
-      <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
-        {typograph(description)}
-      </p>
+      <h3 className="state-card__title">{typograph(title)}</h3>
+      <p className="state-card__desc">{typograph(description)}</p>
+
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="defi-btn-secondary mt-4 text-xs py-2 px-4 border-rose-400/40 hover:border-rose-400 text-rose-300 cursor-pointer"
-        >
+        <button type="button" onClick={onRetry} className="btn btn--ghost-danger">
+          <Icon name="refresh" size={16} />
           {typograph(retryLabel)}
         </button>
       )}
     </div>
-  )
+  );
 }
 
+/**
+ * 4. Состояние успеха (SuccessState)
+ * Сообщает о результате и следующем шаге (Я5). Хэш транзакции показывается
+ * только если он реально передан — без фиктивного примера по умолчанию.
+ */
 export function SuccessState({
-  title = 'Транзакция подтверждена',
-  description = 'Смарт-контракт обновил баланс и начислил доли хранилища.',
-  actionLabel,
+  title = 'Транзакция успешно подтверждена',
+  description = 'Смарт-контракт обработал перевод, обновил долю в хранилище и зафиксировал баланс в распределенном реестре.',
+  actionLabel = 'К списку хранилищ',
   onAction,
+  txHash,
   className = '',
 }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`defi-card text-center p-8 border-emerald-500/30 bg-emerald-500/5 ${className}`}
-    >
-      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-3 shadow-[0_0_16px_rgba(16,185,129,0.2)]">
-        <span className="text-xl">✓</span>
+    <div role="status" aria-live="polite" className={`card state-card state-card--success ${className}`}>
+      <div className="state-card__icon state-card__icon--emerald">
+        <Icon name="check" size={26} />
       </div>
-      <h3 className="text-white font-bold text-base">
-        {typograph(title)}
-      </h3>
-      <p className="text-slate-400 text-xs mt-1 max-w-sm mx-auto">
-        {typograph(description)}
-      </p>
-      {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="defi-btn-primary mt-4 text-xs py-2 px-4 cursor-pointer"
-        >
-          {typograph(actionLabel)}
-        </button>
+      <h3 className="state-card__title">{typograph(title)}</h3>
+      <p className="state-card__desc">{typograph(description)}</p>
+
+      {txHash && (
+        <div className="state-card__hash">
+          <span className="text-subtle">{typograph('Хэш транзакции:')}</span>
+          <span className="mono-number" style={{ color: 'var(--text)', fontWeight: 600 }}>
+            {txHash}
+          </span>
+        </div>
+      )}
+
+      {actionLabel && (
+        <div>
+          <button type="button" onClick={onAction} className="btn btn--primary">
+            {typograph(actionLabel)}
+          </button>
+        </div>
       )}
     </div>
-  )
+  );
+}
+
+/**
+ * ПРАВИЛО Н4: Демо-переключатель состояний студии «Калибр» — закреплённая панель,
+ * позволяющая мгновенно открыть и проверить все состояния экрана.
+ */
+export function StateSwitcher() {
+  const { stateMode, setStateMode } = useContext(AtlantContext);
+
+  const modes = [
+    { key: 'normal', label: 'Обычное', icon: 'dot' },
+    { key: 'loading', label: 'Загрузка', icon: 'refresh' },
+    { key: 'empty', label: 'Пусто', icon: 'inbox' },
+    { key: 'error', label: 'Ошибка', icon: 'alert' },
+    { key: 'success', label: 'Успех', icon: 'check' },
+  ];
+
+  return (
+    <aside aria-label="Демо-переключатель состояний экрана по стандарту «Калибр»" className="state-switcher">
+      <div className="state-switcher__panel">
+        <span className="state-switcher__label">Калибр У1</span>
+        {modes.map((m) => {
+          const isActive = stateMode === m.key;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => setStateMode(m.key)}
+              className="state-switcher__btn"
+              aria-pressed={isActive}
+              title={`Включить состояние: ${m.label}`}
+            >
+              <Icon name={m.icon} size={14} />
+              <span>{m.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
 }

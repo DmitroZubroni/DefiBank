@@ -95,7 +95,7 @@ const PATHS = {
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
 };
 
-export default function Icon({ name, size = 20, className = '', strokeWidth = 1.6, title }) {
+export default function Icon({ name, size = 20, className = '', strokeWidth = 1.6, title, style, ...rest }) {
   const content = PATHS[name] || PATHS.layers;
   return (
     <svg
@@ -108,8 +108,10 @@ export default function Icon({ name, size = 20, className = '', strokeWidth = 1.
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      style={{ flexShrink: 0, ...style }}
       aria-hidden={title ? undefined : 'true'}
       role={title ? 'img' : undefined}
+      {...rest}
     >
       {title && <title>{title}</title>}
       {content}

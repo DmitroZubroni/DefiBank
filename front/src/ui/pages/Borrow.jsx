@@ -1,156 +1,282 @@
-import { useContext, useState } from "react";
-import { Row, Col } from "react-bootstrap";
-import { AtlantContext } from "../../core/context";
-import ContractService from "../../service/ContractService";
-import { MARKETS } from "../../service/contracts.js";
-import Header from "../component/Header.jsx";
-import { typograph } from "../../core/typograph";
+import { useContext, useState } from 'react';
+import { AtlantContext } from '../../core/context';
+import ContractService from '../../service/ContractService';
+import { MARKETS } from '../../service/contracts.js';
+import Header from '../component/Header.jsx';
+import { typograph } from '../../core/typograph';
+import Icon from '../icons/Icon.jsx';
+import HealthFactorGauge from '../illustrations/HealthFactorGauge.jsx';
+import { zoneFor } from '../illustrations/healthZone.js';
+import { LoadingSkeleton, EmptyState, ErrorState, SuccessState, StateSwitcher } from '../component/States.jsx';
 
 const marketServices = MARKETS.map((v) => ({
   ...v,
   service: new ContractService(v.abi, v.address),
 }));
 
-const ACTION_LABELS = {
-  depositMarket: "Внести залог",
-  withdrawMarket: "Вывести залог",
-  borrow: "Взять займ",
-  repay: "Погасить долг",
+const MARKET_ICONS = { market1: 'bolt', market2: 'gem', market3: 'shield' };
+
+const ACTION_CONFIG = {
+  depositMarket: { label: 'Внести залог', className: 'btn--emerald', unit: 'collateralAsset' },
+  withdrawMarket: { label: 'Вывести залог', className: 'btn--secondary', unit: 'collateralAsset' },
+  borrow: { label: 'Взять займ', className: 'btn--primary', unit: 'borrowAsset' },
+  repay: { label: 'Погасить долг', className: 'btn--secondary', unit: 'borrowAsset' },
 };
 
-const MarketForm = ({ label, service, address }) => {
-  const { wallet } = useContext(AtlantContext);
-  const [amount, setAmount] = useState("");
-  const [pendingAction, setPendingAction] = useState(null);
-  const [statusMessage, setStatusMessage] = useState(null);
+// Чисто презентационная оценка Health Factor для гейджа: доля использованного
+// лимита LLTV (= текущий LTV / лимитный LTV рынка). Отображение, не бизнес-логика —
+// исходные значения (ltvPercent, lltv) приходят без изменений от mock-провайдера.
+function readPercent(str, fallback) {
+  const n = parseFloat(String(str).replace('%', '').replace(',', '.'));
+  return Number.isFinite(n) ? n : fallback;
+}
 
-  const handle = async (action) => {
+const MarketCard = ({ market }) => {
+  const { wallet, currentAccount, login, showToast } = useContext(AtlantContext);
+  const [activeAction, setActiveAction] = useState('depositMarket');
+  const [amount, setAmount] = useState('');
+  const [pendingAction, setPendingAction] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  const userMarketPos = currentAccount?.marketPositions?.[market.key] || {
+    borrowShares: 0,
+    collateralShares: 0,
+    currentDebt: 0,
+    ltvPercent: '0.0%',
+  };
+
+  const lltvValue = readPercent(market.lltv, 85);
+  const currentLtvValue = readPercent(userMarketPos.ltvPercent, 0);
+  const healthRatio = lltvValue > 0 ? Math.min(1, currentLtvValue / lltvValue) : 0;
+  const healthZone = zoneFor(healthRatio);
+
+  const handleAction = async (e) => {
+    e.preventDefault();
     if (!wallet) {
-      setStatusMessage("Подключите кошелек для совершения транзакции");
+      login();
       return;
     }
-    if (!amount || Number(amount) <= 0) {
-      setStatusMessage("Укажите сумму больше нуля");
+    const num = parseFloat(amount);
+    if (!amount || isNaN(num) || num <= 0) {
+      setFeedback({ type: 'danger', message: 'Укажите положительную сумму' });
       return;
     }
-    setPendingAction(action);
-    setStatusMessage(null);
+
+    setPendingAction(true);
+    setFeedback(null);
+
     try {
-      await service[action](amount, wallet);
-      setStatusMessage(`Транзакция «${ACTION_LABELS[action]}» успешно отправлена`);
-      setAmount("");
+      const res = await market.service[activeAction](num, wallet);
+      const actionName = ACTION_CONFIG[activeAction].label;
+      setFeedback({
+        type: 'success',
+        message: `Транзакция «${actionName}» (${num.toLocaleString('ru-RU')}) успешно завершена`,
+        hash: res.transactionHash,
+      });
+      showToast(`Операция «${actionName}» подтверждена`, 'success');
+      setAmount('');
     } catch (err) {
-      console.error(err);
-      setStatusMessage("Ошибка выполнения транзакции: проверьте баланс и лимиты");
+      setFeedback({
+        type: 'danger',
+        message: err.message || 'Ошибка выполнения транзакции: проверьте лимиты залога',
+      });
     } finally {
-      setPendingAction(null);
+      setPendingAction(false);
     }
   };
 
+  const config = ACTION_CONFIG[activeAction];
+  const tokenUnit = market[config.unit];
+  const amountInputId = `borrow-input-${market.key}`;
+  const feedbackId = `borrow-feedback-${market.key}`;
+
   return (
-    <div className="defi-card p-4 h-100 d-flex flex-col justify-content-between">
+    <div className="card card--pad">
       <div>
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h3 className="fs-5 fw-bold text-white mb-0">{label}</h3>
-            <div className="text-secondary mono-number text-truncate" style={{ fontSize: "0.75rem", maxWidth: 220 }}>
-              {address}
+        <div className="flex items-center justify-between gap-2" style={{ marginBottom: '1rem' }}>
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="glyph-tile glyph-tile--neutral">
+              <Icon name={MARKET_ICONS[market.key] || 'layers'} size={20} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="h3 truncate" style={{ fontSize: '1.05rem' }}>
+                {market.title}
+              </h3>
+              <div className="text-subtle mono-number truncate" style={{ fontSize: '0.72rem', maxWidth: 220 }}>
+                {market.address}
+              </div>
             </div>
           </div>
-          <span className="defi-badge-emerald">Активен</span>
+          <span className="badge badge--gold">LLTV: {market.lltv}</span>
         </div>
 
-        <div className="mb-3">
-          <label className="text-secondary mono-number d-block mb-1.5" style={{ fontSize: "0.8rem" }}>
-            {typograph("Сумма транзакции (в токенах)")}
-          </label>
-          <input
-            type="number"
-            className="defi-input mono-number"
-            placeholder="0.00"
-            min="0"
-            step="any"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+        <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
+          <HealthFactorGauge
+            ratio={healthRatio}
+            caption="HEALTH"
+            className="min-w-0"
+            style={{ width: 128, flexShrink: 0 }}
           />
-        </div>
-
-        {statusMessage && (
-          <div
-            className="p-2.5 rounded-2 mb-3 mono-number"
-            style={{
-              fontSize: "0.8rem",
-              background: statusMessage.includes("Ошибка") ? "rgba(244, 63, 94, 0.15)" : "rgba(16, 185, 129, 0.15)",
-              color: statusMessage.includes("Ошибка") ? "#FDA4AF" : "#6EE7B7",
-              border: `1px solid ${statusMessage.includes("Ошибка") ? "rgba(244, 63, 94, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
-            }}
-          >
-            {typograph(statusMessage)}
+          <div className="min-w-0">
+            <span className="badge" style={{ background: 'transparent', border: `1px solid ${healthZone.tone}`, color: healthZone.tone, padding: '0.2rem 0.6rem' }}>
+              <Icon name="gauge" size={12} />
+              {healthZone.label}
+            </span>
+            <p className="text-subtle text-small mt-2 mb-0">
+              {typograph('Доля использованного лимита LLTV: текущий LTV относительно максимально допустимого.')}
+            </p>
           </div>
-        )}
-      </div>
-
-      <div className="d-grid gap-2 pt-2">
-        <div className="d-flex gap-2">
-          <button
-            onClick={() => handle("depositMarket")}
-            disabled={pendingAction !== null}
-            className="defi-btn-primary flex-1 text-xs"
-          >
-            {pendingAction === "depositMarket" ? "Отправка..." : typograph("Внести залог")}
-          </button>
-          <button
-            onClick={() => handle("withdrawMarket")}
-            disabled={pendingAction !== null}
-            className="defi-btn-secondary flex-1 text-xs"
-          >
-            {pendingAction === "withdrawMarket" ? "Отправка..." : typograph("Вывести залог")}
-          </button>
         </div>
 
-        <div className="d-flex gap-2">
-          <button
-            onClick={() => handle("borrow")}
-            disabled={pendingAction !== null}
-            className="defi-btn-secondary flex-1 text-xs border-amber-500/30 text-amber-300"
-          >
-            {pendingAction === "borrow" ? "Отправка..." : typograph("Взять займ")}
-          </button>
-          <button
-            onClick={() => handle("repay")}
-            disabled={pendingAction !== null}
-            className="defi-btn-secondary flex-1 text-xs"
-          >
-            {pendingAction === "repay" ? "Отправка..." : typograph("Погасить")}
-          </button>
+        <div className="data-tile" style={{ marginBottom: '1rem' }}>
+          <div className="data-grid">
+            <div>
+              <span className="data-tile__label">{typograph('Ваш залог в рынке')}</span>
+              <div className="mono-number" style={{ fontWeight: 700, color: 'var(--emerald)' }}>
+                {userMarketPos.collateralShares?.toLocaleString?.('ru-RU')} {market.collateralAsset}
+              </div>
+            </div>
+            <div>
+              <span className="data-tile__label">{typograph('Текущий долг')}</span>
+              <div className="mono-number" style={{ fontWeight: 700, color: 'var(--gold)' }}>
+                {userMarketPos.currentDebt?.toLocaleString?.('ru-RU')} {market.borrowAsset}
+              </div>
+            </div>
+            <div className="data-grid__divider">
+              <span className="data-tile__label">{typograph('Ставка займа (APY)')}</span>
+              <div className="mono-number" style={{ fontWeight: 700 }}>
+                {market.borrowRate}
+              </div>
+            </div>
+            <div>
+              <span className="data-tile__label">{typograph('Коэффициент LTV')}</span>
+              <div className="mono-number" style={{ fontWeight: 700 }}>
+                {userMarketPos.ltvPercent || '0.0%'}
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div className="segmented" role="group" aria-label="Тип операции">
+          {Object.entries(ACTION_CONFIG).map(([actKey, actCfg]) => {
+            const isAct = activeAction === actKey;
+            const isBorrowSide = actKey.includes('borrow') || actKey.includes('repay');
+            return (
+              <button
+                key={actKey}
+                type="button"
+                onClick={() => {
+                  setActiveAction(actKey);
+                  setFeedback(null);
+                }}
+                className={`segmented__btn ${isBorrowSide ? '' : 'segmented__btn--emerald'}`}
+                aria-pressed={isAct}
+              >
+                {typograph(actCfg.label)}
+              </button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleAction}>
+          <div className="field">
+            <label htmlFor={amountInputId} className="field__label" style={{ display: 'block', marginBottom: '0.4rem' }}>
+              {typograph(`Сумма операции (${tokenUnit})`)}
+            </label>
+            <div className="input-wrap">
+              <input
+                id={amountInputId}
+                type="number"
+                className="input input--suffixed mono-number"
+                placeholder="0.00"
+                min="0"
+                step="any"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={pendingAction}
+                required
+                aria-describedby={feedback ? feedbackId : undefined}
+                aria-invalid={feedback?.type === 'danger' ? 'true' : undefined}
+              />
+              <span className="input-suffix">{tokenUnit}</span>
+            </div>
+          </div>
+
+          {feedback && (
+            <div id={feedbackId} role={feedback.type === 'danger' ? 'alert' : 'status'} className={`notice notice--${feedback.type === 'danger' ? 'danger' : 'success'}`}>
+              <Icon name={feedback.type === 'danger' ? 'alert' : 'check'} size={16} />
+              <span>
+                {typograph(feedback.message)}
+                {feedback.hash && <span className="notice__hash truncate">Хэш: {feedback.hash}</span>}
+              </span>
+            </div>
+          )}
+
+          <button type="submit" disabled={pendingAction} className={`btn ${config.className} btn--block`}>
+            {pendingAction ? typograph('Синхронизация смарт-контракта…') : !wallet ? typograph('Подключить кошелек') : typograph(config.label)}
+          </button>
+        </form>
       </div>
     </div>
   );
 };
 
-const Borrow = () => (
-  <div style={{ minHeight: "100vh", background: "#030712" }}>
-    <Header />
-    <main className="container">
-      <div className="mb-4">
-        <h1 className="fs-3 fw-bold text-white mb-1">
-          {typograph("Управление залогами и займами")}
-        </h1>
-        <p className="text-secondary" style={{ fontSize: "0.9rem" }}>
-          {typograph("Вносите залог в изолированные рынки и получайте заемную ликвидность под низкий процент.")}
-        </p>
-      </div>
+const Borrow = () => {
+  const { stateMode, setStateMode } = useContext(AtlantContext);
 
-      <Row className="g-4">
-        {marketServices.map((v) => (
-          <Col key={v.key || v.address} md={6}>
-            <MarketForm label={v.title} service={v.service} address={v.address} />
-          </Col>
-        ))}
-      </Row>
-    </main>
-  </div>
-);
+  return (
+    <div style={{ minHeight: '100vh' }}>
+      <Header />
+
+      <main className="container" id="main-content">
+        <div className="section">
+          <span className="badge badge--neutral badge--dot mb-0" style={{ marginBottom: '0.75rem' }}>
+            {typograph('Изолированные кредитные пулы · демо')}
+          </span>
+          <h1 className="h1 mt-2" style={{ marginBottom: '0.75rem' }}>
+            {typograph('Управление залогами и займами')}
+          </h1>
+          <p className="lede mb-0">
+            {typograph(
+              'Предоставляйте залоговые активы (wETH, WBTC, stETH) и привлекайте стейблкоины с фиксированным лимитом ликвидации (LLTV). Изолированная модель гарантирует защиту от системных рисков других пулов.'
+            )}
+          </p>
+        </div>
+
+        {stateMode === 'loading' ? (
+          <LoadingSkeleton count={3} />
+        ) : stateMode === 'error' ? (
+          <ErrorState
+            title="Ошибка связи с кредитными смарт-контрактами"
+            description="Проверьте соединение с оракулом Chainlink и повторите запрос."
+            onRetry={() => setStateMode('normal')}
+          />
+        ) : stateMode === 'empty' ? (
+          <EmptyState
+            title="Кредитные рынки недоступны"
+            description="В настоящее время рынки находятся на плановой синхронизации параметров риска."
+            actionLabel="Обновить"
+            onAction={() => setStateMode('normal')}
+          />
+        ) : stateMode === 'success' ? (
+          <SuccessState
+            title="Кредитная линия активирована"
+            description="Залоговые активы зафиксированы, заемные средства переведены на баланс счета."
+            actionLabel="К списку рынков"
+            onAction={() => setStateMode('normal')}
+          />
+        ) : (
+          <div className="grid-cards">
+            {marketServices.map((v) => (
+              <MarketCard key={v.key || v.address} market={v} />
+            ))}
+          </div>
+        )}
+      </main>
+
+      <StateSwitcher />
+    </div>
+  );
+};
 
 export default Borrow;

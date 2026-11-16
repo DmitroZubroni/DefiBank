@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
-import { Row, Col } from "react-bootstrap";
-import Header from "../component/Header.jsx";
-import ContractService from "../../service/ContractService.jsx";
-import { MARKETS, VAULTS } from "../../service/contracts.js";
-import { typograph } from "../../core/typograph";
-import DefiVaultHeroArt from "../component/DefiVaultHeroArt.jsx";
-import { LoadingSkeleton, EmptyState } from "../component/States.jsx";
+import { useEffect, useState, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import Header from '../component/Header.jsx';
+import ContractService from '../../service/ContractService.jsx';
+import { MARKETS, VAULTS } from '../../service/contracts.js';
+import { typograph } from '../../core/typograph';
+import Icon from '../icons/Icon.jsx';
+import VaultIllustration from '../illustrations/VaultIllustration.jsx';
+import YieldCurveIllustration from '../illustrations/YieldCurveIllustration.jsx';
+import { LoadingSkeleton, EmptyState, ErrorState, SuccessState, StateSwitcher } from '../component/States.jsx';
+import { AtlantContext } from '../../core/context.jsx';
 
 const marketServices = MARKETS.map((item) => ({
   ...item,
@@ -17,300 +20,283 @@ const vaultServices = VAULTS.map((item) => ({
   service: new ContractService(item.abi, item.address),
 }));
 
+// Презентационное соответствие «ключ хранилища/рынка → иконка» (замена эмодзи из
+// contracts.js на кастомные SVG-иконки). Исходные данные контрактов не меняются.
+const VAULT_ICONS = { vault1: 'vault', vault2: 'gem', vault3: 'crown' };
+const MARKET_ICONS = { market1: 'bolt', market2: 'gem', market3: 'shield' };
+
 export default function Dashboard() {
+  const { stateMode, setStateMode } = useContext(AtlantContext);
   const [markets, setMarkets] = useState([]);
   const [vaults, setVaults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const marketsData = await Promise.all(
+  const loadData = async () => {
+    setLoading(true);
+    setHasError(false);
+    try {
+      const [marketsData, vaultsData] = await Promise.all([
+        Promise.all(
           marketServices.map(async (item) => {
             const data = await item.service.getMarket();
             return { ...item, data };
           })
-        );
-
-        const vaultsData = await Promise.all(
+        ),
+        Promise.all(
           vaultServices.map(async (item) => {
             const data = await item.service.getVault();
             return { ...item, data };
           })
-        );
+        ),
+      ]);
 
-        setMarkets(marketsData);
-        setVaults(vaultsData);
-      } catch (err) {
-        console.error("Failed to load DeFi contracts:", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+      setMarkets(marketsData);
+      setVaults(vaultsData);
+    } catch (err) {
+      console.error('Failed to load DeFi contracts:', err);
+      setHasError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
+  // Сводные метрики хедлайна — демонстрационные (см. DemoBanner в Header).
+  const totalTVL = '$39 950 000';
+  const totalBorrowed = '$39 550 000';
+  const avgYield = '10,00%';
+
+  const yieldPoints = VAULTS.map((v) => ({ label: v.asset, value: parseFloat(v.apy) }));
+
   return (
-    <div style={{ minHeight: "100vh", background: "#030712" }}>
+    <div style={{ minHeight: '100vh' }}>
       <Header />
 
-      <main className="container">
-        {/* Institutional Hero Banner */}
-        <section
-          className="defi-card p-4 p-md-5 mb-5"
-          style={{
-            background: "linear-gradient(135deg, #0B132B 0%, #111C44 60%, #030712 100%)",
-            border: "1px solid rgba(16, 185, 129, 0.25)",
-          }}
-        >
-          <div className="row align-items-center g-4">
-            <div className="col-lg-7">
-              <div className="defi-badge-emerald mb-3">
-                <span>●</span>
-                <span>{typograph("Институциональный протокол")}</span>
-              </div>
-              <h1 className="fw-bold text-white mb-2" style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)" }}>
-                {typograph("Децентрализованные хранилища и рынок ликвидности")}
+      <main className="container" id="main-content">
+        <section className="card card--hero section">
+          <div className="grid-cards grid-cards--2" style={{ alignItems: 'center' }}>
+            <div>
+              <span className="badge badge--gold badge--dot mb-0" style={{ marginBottom: '1rem' }}>
+                {typograph('Институциональный протокол · демо')}
+              </span>
+
+              <h1 className="h1 mt-2" style={{ marginBottom: '0.75rem' }}>
+                {typograph('Институциональные хранилища ликвидности и стейкинг')}
               </h1>
-              <p className="text-slate-300 fs-6 mb-4" style={{ color: "#94A3B8", lineHeight: 1.6 }}>
+
+              <p className="lede" style={{ marginBottom: '1.5rem' }}>
                 {typograph(
-                  "Автоматизированное управление залоговыми активами, динамические пулы доходности и безопасное кредитование на базе смарт-контрактов нового поколения."
+                  'Децентрализованный сейф активов с автоматизированным управлением доходностью по стандарту ERC-4626 и изолированными рынками кредитования.'
                 )}
               </p>
 
-              {/* Bento Metric Pills */}
-              <div className="d-flex flex-wrap gap-3">
-                <div
-                  className="px-3.5 py-2.5 rounded-3"
-                  style={{ background: "rgba(11, 19, 43, 0.8)", border: "1px solid rgba(255, 255, 255, 0.08)" }}
-                >
-                  <div className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                    {typograph("АКТИВНЫХ ХРАНИЛИЩ")}
-                  </div>
-                  <div className="fs-5 fw-bold text-white mono-number">
-                    {vaults.length || VAULTS.length}
-                  </div>
+              <div className="stat-row">
+                <div className="data-tile">
+                  <span className="data-tile__label">{typograph('ОБЩИЙ TVL ХРАНИЛИЩ')}</span>
+                  <span className="data-tile__value mono-number" style={{ color: 'var(--gold)' }}>
+                    {totalTVL}
+                  </span>
                 </div>
-
-                <div
-                  className="px-3.5 py-2.5 rounded-3"
-                  style={{ background: "rgba(11, 19, 43, 0.8)", border: "1px solid rgba(255, 255, 255, 0.08)" }}
-                >
-                  <div className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                    {typograph("РЫНКОВ ЗАЙМОВ")}
-                  </div>
-                  <div className="fs-5 fw-bold text-white mono-number" style={{ color: "#10B981" }}>
-                    {markets.length || MARKETS.length}
-                  </div>
+                <div className="data-tile">
+                  <span className="data-tile__label">{typograph('ОБЪЕМ ЗАЙМОВ')}</span>
+                  <span className="data-tile__value mono-number" style={{ color: 'var(--data-secondary)' }}>
+                    {totalBorrowed}
+                  </span>
                 </div>
-
-                <div
-                  className="px-3.5 py-2.5 rounded-3"
-                  style={{ background: "rgba(11, 19, 43, 0.8)", border: "1px solid rgba(255, 255, 255, 0.08)" }}
-                >
-                  <div className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                    {typograph("СТАНДАРТ БЕЗОПАСНОСТИ")}
-                  </div>
-                  <div className="fs-5 fw-bold mono-number" style={{ color: "#F59E0B" }}>
-                    ERC-4626
-                  </div>
+                <div className="data-tile">
+                  <span className="data-tile__label">{typograph('СРЕДНЯЯ ДОХОДНОСТЬ')}</span>
+                  <span className="data-tile__value mono-number" style={{ color: 'var(--emerald)' }}>
+                    {avgYield} APY
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="col-lg-5 text-center">
-              <DefiVaultHeroArt width={340} height={200} className="w-100 h-auto" />
+            <div>
+              <div className="vault-illustration-frame">
+                <VaultIllustration locked />
+              </div>
+              <YieldCurveIllustration points={yieldPoints} className="mt-4" />
             </div>
           </div>
         </section>
 
-        {/* Section 1: Vaults (Хранилища) */}
-        <section className="mb-5">
-          <div className="d-flex align-items-center justify-content-between mb-3">
+        <section className="section">
+          <div className="section__head">
             <div>
-              <h2 className="fs-4 fw-bold text-white mb-0">{typograph("Инвестиционные хранилища (Vaults)")}</h2>
-              <p className="text-secondary mb-0" style={{ fontSize: "0.85rem" }}>
-                {typograph("Стандарт ERC-4626 с непрерывным реинвестированием дохода")}
+              <h2 className="h2">{typograph('Инвестиционные хранилища (ERC-4626 Vaults)')}</h2>
+              <p className="text-muted mt-2 mb-0">
+                {typograph('Токенизированные пулы доходности с капитализацией процентов и мгновенным выводом')}
               </p>
             </div>
-            <span className="defi-badge-emerald">{vaults.length} {typograph("пула")}</span>
+            <Link to="/lender" className="badge badge--gold no-underline">
+              {vaults.length} {typograph('пула')}
+              <Icon name="arrowRight" size={12} />
+            </Link>
           </div>
 
-          {loading ? (
-            <LoadingSkeleton count={2} />
-          ) : vaults.length === 0 ? (
+          {stateMode === 'loading' || (loading && stateMode === 'normal') ? (
+            <LoadingSkeleton count={3} />
+          ) : stateMode === 'error' || hasError ? (
+            <ErrorState
+              title="Не удалось загрузить параметры хранилищ"
+              description="RPC-узел не отвечает на вызовы ERC-4626. Проверьте соединение или повторите запрос."
+              onRetry={loadData}
+            />
+          ) : stateMode === 'empty' ? (
             <EmptyState
-              title="Хранилища временно недоступны"
-              description="Проверьте соединение с нодой блокчейна или повторите запрос."
+              title="Хранилища временно отсутствуют"
+              description="В данный момент нет открытых пулов ликвидности. Новые институциональные хранилища будут добавлены в ближайшее время."
+              actionLabel="Обновить список"
+              onAction={loadData}
+            />
+          ) : stateMode === 'success' ? (
+            <SuccessState
+              title="Параметры хранилищ верифицированы"
+              description="Смарт-контракты ERC-4626 проверены мультисиг-аудитом. Все балансы синхронизированы."
+              actionLabel="Внести депозит"
+              onAction={() => setStateMode('normal')}
             />
           ) : (
-            <Row className="g-4">
+            <div className="grid-cards">
               {vaults.map((vault) => (
-                <Col key={vault.key || vault.address} md={6}>
-                  <div className="defi-card p-4 h-100 d-flex flex-col justify-content-between">
-                    <div>
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center gap-2.5">
-                          <div
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 10,
-                              background: "rgba(16, 185, 129, 0.15)",
-                              display: "grid",
-                              placeItems: "center",
-                              color: "#10B981",
-                              fontSize: 18,
-                            }}
-                          >
-                            💎
-                          </div>
-                          <div>
-                            <h3 className="fs-5 fw-bold text-white mb-0">{vault.title}</h3>
-                            <div className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {vault.data?.[1]?.toString?.() || "VAULT SHARE"}
-                            </div>
+                <div key={vault.key || vault.address} className="card card--pad">
+                  <div>
+                    <div className="flex items-center justify-between gap-2" style={{ marginBottom: '1rem' }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="glyph-tile glyph-tile--gold">
+                          <Icon name={VAULT_ICONS[vault.key] || 'layers'} size={20} />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="h3 truncate" style={{ fontSize: '1.05rem' }}>
+                            {vault.title}
+                          </h3>
+                          <div className="text-subtle mono-number truncate" style={{ fontSize: '0.72rem' }}>
+                            {vault.data?.[1]?.toString?.() || vault.shareSymbol}
                           </div>
                         </div>
-                        <span className="defi-badge-gold">{typograph("АКТИВНО")}</span>
                       </div>
+                      <span className="badge badge--emerald">{vault.apy || '12.5%'} APY</span>
+                    </div>
 
-                      <div
-                        className="p-3 rounded-3 mb-3"
-                        style={{ background: "#0B132B", border: "1px solid rgba(255, 255, 255, 0.05)" }}
-                      >
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Управляемые активы")}
-                            </span>
-                            <div className="fs-6 fw-bold text-white mono-number">
-                              {vault.data?.[2]?.toString?.() || "0.00"}
-                            </div>
+                    <div className="data-tile" style={{ marginBottom: '1rem' }}>
+                      <div className="data-grid">
+                        <div>
+                          <span className="data-tile__label">{typograph('Активы под управлением')}</span>
+                          <div className="mono-number" style={{ fontWeight: 700 }}>
+                            {vault.data?.[2]?.toString?.() || '0.00'}
                           </div>
-                          <div className="col-6">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Цена доли")}
-                            </span>
-                            <div className="fs-6 fw-bold mono-number" style={{ color: "#10B981" }}>
-                              {vault.data?.[4]?.toString?.() || "1.0000"}
-                            </div>
+                        </div>
+                        <div>
+                          <span className="data-tile__label">{typograph('Цена доли')}</span>
+                          <div className="mono-number" style={{ fontWeight: 700, color: 'var(--gold)' }}>
+                            {vault.data?.[4]?.toString?.() || '1.0000'}
                           </div>
-                          <div className="col-12 mt-2 pt-2 border-top border-white-5">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Адрес контракта")}
-                            </span>
-                            <div
-                              className="mono-number text-truncate"
-                              style={{ fontSize: "0.75rem", color: "#64748B" }}
-                            >
-                              {vault.address}
-                            </div>
+                        </div>
+                        <div className="data-grid__divider">
+                          <span className="data-tile__label">{typograph('Адрес смарт-контракта (демо)')}</span>
+                          <div className="mono-number text-subtle truncate" style={{ fontSize: '0.72rem' }}>
+                            {vault.address}
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </Col>
+
+                  <Link to="/lender" className="btn btn--primary btn--block">
+                    {typograph('Управление депозитом')}
+                    <Icon name="arrowRight" size={16} />
+                  </Link>
+                </div>
               ))}
-            </Row>
+            </div>
           )}
         </section>
 
-        {/* Section 2: Lending Markets (Рынки займов) */}
-        <section>
-          <div className="d-flex align-items-center justify-content-between mb-3">
+        <section className="section">
+          <div className="section__head">
             <div>
-              <h2 className="fs-4 fw-bold text-white mb-0">{typograph("Кредитные рынки (Lending Markets)")}</h2>
-              <p className="text-secondary mb-0" style={{ fontSize: "0.85rem" }}>
-                {typograph("Изолированные пулы залогового кредитования и управления рисками")}
+              <h2 className="h2">{typograph('Кредитные рынки (Lending Markets)')}</h2>
+              <p className="text-muted mt-2 mb-0">
+                {typograph('Изолированные рынки залогового кредитования с защитой от каскадных ликвидаций')}
               </p>
             </div>
-            <span className="defi-badge-emerald">{markets.length} {typograph("рынка")}</span>
+            <Link to="/borrow" className="badge badge--gold no-underline">
+              {markets.length} {typograph('рынка')}
+              <Icon name="arrowRight" size={12} />
+            </Link>
           </div>
 
-          {loading ? (
-            <LoadingSkeleton count={2} />
-          ) : markets.length === 0 ? (
-            <EmptyState
-              title="Рынки временно недоступны"
-              description="Подключение к смарт-контрактам рынков займов не установлено."
+          {stateMode === 'loading' || (loading && stateMode === 'normal') ? (
+            <LoadingSkeleton count={3} />
+          ) : stateMode === 'error' ? (
+            <ErrorState
+              title="Ошибка загрузки кредитных рынков"
+              description="Не удалось связаться с контрактами пулов залогов."
+              onRetry={loadData}
             />
           ) : (
-            <Row className="g-4">
+            <div className="grid-cards">
               {markets.map((market) => (
-                <Col key={market.key || market.address} md={6}>
-                  <div className="defi-card p-4 h-100 d-flex flex-col justify-content-between">
-                    <div>
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center gap-2.5">
-                          <div
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 10,
-                              background: "rgba(6, 182, 212, 0.15)",
-                              display: "grid",
-                              placeItems: "center",
-                              color: "#06B6D4",
-                              fontSize: 18,
-                            }}
-                          >
-                            ⚡
-                          </div>
-                          <div>
-                            <h3 className="fs-5 fw-bold text-white mb-0">{market.title}</h3>
-                            <div className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {market.data?.[7]?.toString?.() || "COLLATERAL"} / {market.data?.[6]?.toString?.() || "BORROW"}
-                            </div>
+                <div key={market.key || market.address} className="card card--pad">
+                  <div>
+                    <div className="flex items-center justify-between gap-2" style={{ marginBottom: '1rem' }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="glyph-tile glyph-tile--neutral">
+                          <Icon name={MARKET_ICONS[market.key] || 'layers'} size={20} />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="h3 truncate" style={{ fontSize: '1.05rem' }}>
+                            {market.title}
+                          </h3>
+                          <div className="text-subtle mono-number truncate" style={{ fontSize: '0.72rem' }}>
+                            {market.data?.[7]?.toString?.() || market.collateralAsset} / {market.data?.[6]?.toString?.() || market.borrowAsset}
                           </div>
                         </div>
-                        <span className="defi-badge-gold">
-                          LLTV: {market.data?.[1]?.toString?.() || "85%"}
-                        </span>
                       </div>
+                      <span className="badge badge--gold">LLTV: {market.data?.[1]?.toString?.() || market.lltv}</span>
+                    </div>
 
-                      <div
-                        className="p-3 rounded-3 mb-3"
-                        style={{ background: "#0B132B", border: "1px solid rgba(255, 255, 255, 0.05)" }}
-                      >
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Ставка займа")}
-                            </span>
-                            <div className="fs-6 fw-bold mono-number" style={{ color: "#F59E0B" }}>
-                              {market.data?.[2]?.toString?.() || "4.50%"}
-                            </div>
+                    <div className="data-tile" style={{ marginBottom: '1rem' }}>
+                      <div className="data-grid">
+                        <div>
+                          <span className="data-tile__label">{typograph('Ставка займа')}</span>
+                          <div className="mono-number" style={{ fontWeight: 700, color: 'var(--gold)' }}>
+                            {market.data?.[2]?.toString?.() || market.borrowRate}
                           </div>
-                          <div className="col-6">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Индекс заимствования")}
-                            </span>
-                            <div className="fs-6 fw-bold text-white mono-number">
-                              {market.data?.[3]?.toString?.() || "1.000"}
-                            </div>
+                        </div>
+                        <div>
+                          <span className="data-tile__label">{typograph('Индекс займа')}</span>
+                          <div className="mono-number" style={{ fontWeight: 700 }}>
+                            {market.data?.[3]?.toString?.() || '1.042'}
                           </div>
-                          <div className="col-12 mt-2 pt-2 border-top border-white-5">
-                            <span className="text-secondary mono-number" style={{ fontSize: "0.75rem" }}>
-                              {typograph("Адрес рынка")}
-                            </span>
-                            <div
-                              className="mono-number text-truncate"
-                              style={{ fontSize: "0.75rem", color: "#64748B" }}
-                            >
-                              {market.address}
-                            </div>
+                        </div>
+                        <div className="data-grid__divider">
+                          <span className="data-tile__label">{typograph('Общий пул залога')}</span>
+                          <div className="mono-number truncate" style={{ fontWeight: 600 }}>
+                            {market.data?.[5]?.toString?.() || '32 600 000 wETH'}
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </Col>
+
+                  <Link to="/borrow" className="btn btn--secondary btn--block">
+                    {typograph('Взять займ под залог')}
+                    <Icon name="arrowRight" size={16} />
+                  </Link>
+                </div>
               ))}
-            </Row>
+            </div>
           )}
         </section>
       </main>
+
+      <StateSwitcher />
     </div>
   );
 }

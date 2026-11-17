@@ -1,0 +1,54 @@
+/* Institutional ledger: restrained metal, legible positions, quiet surfaces. */
+:root {
+  --canvas: #08111f;
+  --surface: #101e32;
+  --card: #15263c;
+  --card-elevated: #1b3049;
+  --gold: #d8bb7b;
+  --gold-hover: #ebcf94;
+  --gold-text: #ecd49e;
+  --gold-soft: #d8bb7b18;
+  --gold-border: #d8bb7b70;
+  --emerald: #74d3b4;
+  --emerald-hover: #9ce7ce;
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-heading: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, monospace;
+  --text-subtle: #b0bdd0;
+  --border-strong: #8190a5;
+}
+body { overflow-x: visible; }
+.container { width: 100%; }
+.card { box-shadow: none; background-image: none; }
+.card--hero { background: var(--surface); border-color: var(--border-strong); border-top: 3px solid var(--gold); }
+.h1 { font-size: clamp(30px, 3.3vw, 48px); line-height: 1.15; max-width: 24ch; }
+.h2 { font-size: clamp(24px, 2.3vw, 30px); }
+.lede { max-width: 60ch; }
+.data-tile { background: var(--canvas); }
+.data-tile__label, .field__label { font-family: var(--font-sans); font-size: 14px; }
+.data-tile__value { font-size: 20px; }
+.card h3.truncate { white-space: normal; overflow: visible; }
+.brand__tag { font-size: 12px; letter-spacing: .02em; }
+.btn, .segmented__btn, .field__max { min-height: 44px; }
+.input { font-size: 16px; }
+.state-switcher { position: static; width: fit-content; max-width: calc(100% - 32px); margin: 24px auto; }
+.state-switcher__panel { flex-wrap: wrap; }
+.state-switcher__label { font-family: var(--font-sans); }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+:focus { scroll-margin-block: 150px 32px; }
+main, .card, .data-grid > *, .stat-row > * { min-width: 0; }
+.modal { max-height: 85dvh; overflow: auto; }
+@media (max-width: 719px) {
+  .app-header { position: static; }
+  .app-header__bar { gap: 16px; }
+  .main-nav { width: 100%; flex-wrap: wrap; }
+  .nav-link { flex: 1 1 40%; justify-content: center; }
+  .card--hero { padding: 24px 16px; }
+  .section__head { flex-wrap: wrap; }
+  .stat-row { grid-template-columns: 1fr; }
+  .account-option .flex { flex-wrap: wrap; }
+  .modal { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

@@ -52,3 +52,11 @@ main, .card, .data-grid > *, .stat-row > * { min-width: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+/* Review pass 2: 320px badges must wrap; the vault diagram stays still. */
+.badge { white-space: normal; overflow-wrap: anywhere; }
+.card--pad > div > .flex:first-child { flex-wrap: wrap; }
+.vault-ring-spin { animation: none; }
+.btn--emerald { box-shadow: none; }
+.btn--primary { box-shadow: none; }
+.card--hero .stat-row { grid-template-columns: 1fr; }
+@media (min-width: 1280px) { .card--hero .stat-row { grid-template-columns: repeat(3,minmax(0,1fr)); } }

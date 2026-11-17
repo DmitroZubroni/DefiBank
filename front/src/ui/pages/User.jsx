@@ -50,6 +50,7 @@ const User = () => {
       <div style={{ minHeight: '100vh' }}>
         <Header />
         <main className="container" id="main-content" style={{ paddingTop: '3rem' }}>
+          <h1 className="visually-hidden">Портфель</h1>
           <EmptyState
             title="Институциональный кошелек не подключен"
             description="Авторизуйтесь с помощью Web3-провайдера или выберите демонстрационный профиль для просмотра портфеля, залогов и хранилищ ERC-4626."
@@ -212,7 +213,7 @@ const User = () => {
             </div>
           ) : (
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div className="table-scroll">
+              <div className="table-scroll" tabIndex={0} role="region" aria-label="История транзакций">
                 <table className="table">
                   <thead>
                     <tr>

@@ -85,7 +85,7 @@ export default function Dashboard() {
               </span>
 
               <h1 className="h1 mt-2" style={{ marginBottom: '0.75rem' }}>
-                {typograph('Институциональные хранилища ликвидности и стейкинг')}
+                {typograph('Хранилища ликвидности')}
               </h1>
 
               <p className="lede" style={{ marginBottom: '1.5rem' }}>
@@ -156,8 +156,8 @@ export default function Dashboard() {
             />
           ) : stateMode === 'success' ? (
             <SuccessState
-              title="Параметры хранилищ верифицированы"
-              description="Смарт-контракты ERC-4626 проверены мультисиг-аудитом. Все балансы синхронизированы."
+              title="Параметры хранилищ загружены"
+              description="Демонстрационные параметры доступны для просмотра. Выберите хранилище для управления депозитом."
               actionLabel="Внести депозит"
               onAction={() => setStateMode('normal')}
             />

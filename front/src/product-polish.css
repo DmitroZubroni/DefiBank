@@ -1,0 +1,38 @@
+/* Presentation only: institutional metalwork, with the existing geometry intact. */
+:root { --polish-edge: #415168; --polish-inset: #0b1727; }
+.card:not(.card--hero) {
+  background: linear-gradient(155deg, #182a40, var(--surface) 68%);
+  border-color: #35465d;
+  box-shadow: inset 0 1px 0 #ffffff0a, 0 8px 24px #00000016;
+}
+.card--hero {
+  background: linear-gradient(115deg, #15263b, #101e32 65%, #192b40);
+  border-color: var(--polish-edge);
+  border-top-color: var(--gold);
+  box-shadow: inset 0 1px 0 #f6e6c01a, 0 20px 48px #00000020;
+}
+.h1 { font-weight: 600; letter-spacing: -.035em; }
+.h2 { font-weight: 600; letter-spacing: -.025em; }
+.lede { line-height: 1.7; }
+.data-tile { background: var(--polish-inset); border-color: #33445b; box-shadow: inset 0 2px 5px #00000016; }
+.data-tile__label { line-height: 1.5; }
+.mono-number, .table { font-variant-numeric: tabular-nums; }
+.glyph-tile { border-radius: 9px; background: linear-gradient(140deg, #3b3d38, #162539); box-shadow: inset 0 1px 0 #f6e6c029; }
+.glyph-tile--neutral { background: linear-gradient(140deg, #2c3d53, #18283c); }
+.btn--primary, .segmented__btn.is-active {
+  background: linear-gradient(180deg, #ebd39a, var(--gold));
+  border-color: #efdaaa;
+  box-shadow: inset 0 1px 0 #fff4d570, 0 2px 3px #00000020;
+}
+.btn--primary:hover { background: var(--gold-hover); }
+.btn--secondary { background: linear-gradient(180deg, #24374e, #192a40); border-color: #697d98; }
+.input { background: var(--polish-inset); border-color: #71849d; box-shadow: inset 0 2px 4px #00000020; }
+.input:focus-visible { border-color: var(--gold); }
+.segmented { background: #091321; box-shadow: inset 0 1px 4px #00000030; }
+.table-scroll { border-radius: var(--radius-md); border: 1px solid #35465d; }
+.table th { background: #1b2d43; font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; }
+.table tbody tr:nth-child(even) { background: #ffffff03; }
+.table tbody tr:hover { background: #d8bb7b0a; }
+.table td { border-bottom-color: #35465d; }
+/* Restore the original movement suppressed by the earlier refinement layer. */
+@media (prefers-reduced-motion: no-preference) { .vault-ring-spin { animation: vaultRingSpin 24s linear infinite; } }

@@ -18,8 +18,8 @@ export default function VaultIllustration({ locked = true, className = '' }) {
     >
       <defs>
         <radialGradient id="vaultGlow" cx="50%" cy="46%" r="60%">
-          <stop offset="0%" stopColor={locked ? '#f59e0b' : '#10b981'} stopOpacity="0.35" />
-          <stop offset="55%" stopColor={locked ? '#f59e0b' : '#10b981'} stopOpacity="0.08" />
+          <stop offset="0%" stopColor={locked ? '#d8bb7b' : '#10b981'} stopOpacity="0.35" />
+          <stop offset="55%" stopColor={locked ? '#d8bb7b' : '#10b981'} stopOpacity="0.08" />
           <stop offset="100%" stopColor="#030712" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="vaultMetal" x1="0" y1="0" x2="1" y2="1">
@@ -28,7 +28,9 @@ export default function VaultIllustration({ locked = true, className = '' }) {
           <stop offset="100%" stopColor="#0b132b" />
         </linearGradient>
         <linearGradient id="vaultMetalLight" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#334155" />
+          <stop offset="0%" stopColor="#718196" />
+          <stop offset="32%" stopColor="#34465e" />
+          <stop offset="48%" stopColor="#53667c" />
           <stop offset="100%" stopColor="#1e293b" />
         </linearGradient>
       </defs>
@@ -44,19 +46,28 @@ export default function VaultIllustration({ locked = true, className = '' }) {
         const angle = (i / 16) * Math.PI * 2;
         const x = 210 + Math.cos(angle) * 150;
         const y = 196 + Math.sin(angle) * 150;
-        return <circle key={i} cx={x} cy={y} r="4.2" fill="#f59e0b" opacity="0.8" />;
+        return <circle key={i} cx={x} cy={y} r="4.2" fill="#d8bb7b" opacity="0.8" />;
       })}
 
       {/* Дверь сейфа */}
       <circle cx="210" cy="196" r="128" fill="url(#vaultMetalLight)" stroke="#475569" strokeWidth="1.5" />
 
+      {/* Machined concentric grooves and indexed locking ring. */}
+      <g fill="none" stroke="#bac5d1" opacity="0.22">
+        {[112, 116, 120, 124].map(r => <circle key={r} cx="210" cy="196" r={r} strokeWidth="0.7" />)}
+      </g>
+      <g stroke="#d8bb7b" strokeWidth="1.2">
+        {Array.from({ length: 48 }, (_, i) => (
+          <path key={i} d={`M210 60v${i % 4 === 0 ? 7 : 3}`} transform={`rotate(${i * 7.5} 210 196)`} opacity={i % 4 === 0 ? '.9' : '.45'} />
+        ))}
+      </g>
       {/* Концентрическая HUD-кольцо статуса */}
       <circle
         cx="210"
         cy="196"
         r="100"
         fill="none"
-        stroke={locked ? '#f59e0b' : '#10b981'}
+        stroke={locked ? '#d8bb7b' : '#10b981'}
         strokeWidth="2.5"
         strokeDasharray="4 7"
         opacity="0.85"
@@ -73,22 +84,22 @@ export default function VaultIllustration({ locked = true, className = '' }) {
           const x2 = 210 + Math.cos(angle) * 96;
           const y2 = 196 + Math.sin(angle) * 96;
           return (
-            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fcd34d" strokeWidth="7" strokeLinecap="round" />
+            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ebd39a" strokeWidth="7" strokeLinecap="round" />
           );
         })}
       </g>
 
       {/* Центральное колесо-штурвал */}
       <g className="vault-wheel" style={{ transformOrigin: '210px 196px' }}>
-        <circle cx="210" cy="196" r="46" fill="none" stroke="#f59e0b" strokeWidth="5" />
+        <circle cx="210" cy="196" r="46" fill="none" stroke="#d8bb7b" strokeWidth="5" />
         {Array.from({ length: 4 }).map((_, i) => {
           const angle = (i / 4) * Math.PI * 2;
           const x = 210 + Math.cos(angle) * 46;
           const y = 196 + Math.sin(angle) * 46;
           return <line key={i} x1="210" y1="196" x2={x} y2={y} stroke="#cbd5e1" strokeWidth="4" />;
         })}
-        <circle cx="210" cy="196" r="20" fill="#fde68a" stroke="#f59e0b" strokeWidth="3" />
-        <circle cx="210" cy="196" r="8" fill={locked ? '#f59e0b' : '#10b981'} />
+        <circle cx="210" cy="196" r="20" fill="#ead8ae" stroke="#d8bb7b" strokeWidth="3" />
+        <circle cx="210" cy="196" r="8" fill={locked ? '#d8bb7b' : '#10b981'} />
       </g>
 
       {/* Эмблема ERC-4626 внизу камеры */}

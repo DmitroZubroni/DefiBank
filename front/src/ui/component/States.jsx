@@ -166,6 +166,8 @@ export function SuccessState({
 export function StateSwitcher() {
   const { stateMode, setStateMode } = useContext(AtlantContext);
 
+  if (!(["review", "dev"].some(key => new URLSearchParams(window.location.search).has(key)))) return null;
+
   const modes = [
     { key: 'normal', label: 'Обычное', icon: 'dot' },
     { key: 'loading', label: 'Загрузка', icon: 'refresh' },
@@ -175,9 +177,9 @@ export function StateSwitcher() {
   ];
 
   return (
-    <aside aria-label="Демо-переключатель состояний экрана по стандарту «Калибр»" className="state-switcher">
+    <aside aria-label="Проверка состояний экрана" className="state-switcher">
       <div className="state-switcher__panel">
-        <span className="state-switcher__label">Калибр У1</span>
+        <span className="state-switcher__label">Проверка интерфейса</span>
         {modes.map((m) => {
           const isActive = stateMode === m.key;
           return (
